@@ -130,6 +130,10 @@ function defaultStorageStatePath(baseUrl) {
   return path.join(process.cwd(), ".auth", `${stem}.json`);
 }
 
+function repoSettingsUrl(baseUrl, repo) {
+  return `${baseUrl}/${repo}/settings`;
+}
+
 const readmeSelector = "article.markdown-body";
 
 async function hideBlobChrome(page) {
@@ -321,7 +325,7 @@ async function uploadSocialPreview({
   }
 
   const repoUrl = `${baseUrl}/${repo}`;
-  const settingsUrl = `${repoUrl}/settings`;
+  const settingsUrl = repoSettingsUrl(baseUrl, repo);
 
   const { browser, page } = await launchContext({
     storageStatePath,
@@ -491,6 +495,8 @@ async function updateFlow(opts) {
     imagePath: screenshotPath,
     headless,
   });
+
+  console.log(`Done: ${repoSettingsUrl(baseUrl, repo)}`);
 }
 
 function printHelp() {
