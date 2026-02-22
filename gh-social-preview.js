@@ -20,7 +20,7 @@
  *
  * Options (both commands):
  *   --base-url https://github.com        (or your GHE base url)
- *   --storage-state .auth/<host>.json    (default: .auth/github.json for github.com)
+ *   --storage-state /path/to/state.json   (default: $XDG_STATE_HOME/gh-social-preview/auth/<host>.json)
  *   --headless true|false               (default: true for main command, false for init-auth)
  *
  * Options (main command):
@@ -32,6 +32,7 @@
  */
 
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { chromium } = require("playwright");
 
@@ -124,10 +125,24 @@ function defaultOutPath(repo, format) {
   return path.join(dir, `${owner}__${name}.${ext}`);
 }
 
-function defaultStorageStatePath(baseUrl) {
+function storageStateStem(baseUrl) {
   const host = new URL(baseUrl).hostname.toLowerCase();
-  const stem = host === "github.com" ? "github" : host.replace(/[^A-Za-z0-9_.-]/g, "_");
-  return path.join(process.cwd(), ".auth", `${stem}.json`);
+  return host === "github.com" ? "github" : host.replace(/[^A-Za-z0-9_.-]/g, "_");
+}
+
+function defaultXdgStateHome() {
+  const configured = String(process.env.XDG_STATE_HOME || "").trim();
+  if (configured) return path.resolve(configured);
+  return path.join(os.homedir(), ".local", "state");
+}
+
+function defaultStorageStatePath(baseUrl) {
+  return path.join(defaultXdgStateHome(), "gh-social-preview", "auth", `${storageStateStem(baseUrl)}.json`);
+}
+
+function resolveStorageStatePath(baseUrl, inputPath) {
+  if (inputPath) return path.resolve(String(inputPath));
+  return defaultStorageStatePath(baseUrl);
 }
 
 function repoSettingsUrl(baseUrl, repo) {
@@ -545,12 +560,12 @@ async function updateFlow(opts) {
 function printHelp() {
   console.log(`
 Usage:
-  node gh-social-preview.js init-auth [--storage-state .auth/github.json] [--base-url https://github.com]
-  node gh-social-preview.js --repo owner/repo [--storage-state .auth/github.json] [options]
+  node gh-social-preview.js init-auth [--storage-state /path/to/state.json] [--base-url https://github.com]
+  node gh-social-preview.js --repo owner/repo [--storage-state /path/to/state.json] [options]
 
 Options:
   --base-url   Base GitHub URL (default: https://github.com)
-  --storage-state  Path to Playwright storageState JSON (default: ./.auth/<host>.json)
+  --storage-state  Path to Playwright storageState JSON (default: $XDG_STATE_HOME/gh-social-preview/auth/<host>.json, fallback: ~/.local/state/gh-social-preview/auth/<host>.json)
   --headless   true|false (default: init-auth=false, main command=true)
 
 Main command options:
@@ -571,7 +586,6 @@ async function main() {
   const cmd = args._[0];
 
   const baseUrl = normalizeBaseUrl(args["base-url"] || "https://github.com");
-  const defaultStorageState = defaultStorageStatePath(baseUrl);
 
   if (["-h", "--help", "help"].includes(cmd)) {
     printHelp();
@@ -579,7 +593,7 @@ async function main() {
   }
 
   if (cmd === "init-auth") {
-    const storageStatePath = args["storage-state"] ? path.resolve(String(args["storage-state"])) : defaultStorageState;
+    const storageStatePath = resolveStorageStatePath(baseUrl, args["storage-state"]);
     await initAuth({ baseUrl, storageStatePath });
     return;
   }
@@ -592,7 +606,7 @@ async function main() {
   }
 
   const repo = normalizeRepo(args.repo);
-  const storageStatePath = args["storage-state"] ? path.resolve(String(args["storage-state"])) : defaultStorageState;
+  const storageStatePath = resolveStorageStatePath(baseUrl, args["storage-state"]);
   const width = toInt(args.width, defaultCaptureWidth);
   const height = toInt(args.height, defaultCaptureHeight);
   const format = String(args.format || "jpeg").toLowerCase() === "png" ? "png" : "jpeg";

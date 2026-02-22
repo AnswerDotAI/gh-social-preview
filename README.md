@@ -61,13 +61,14 @@ node gh-social-preview.js help
 ### `init-auth`
 
 ```bash
-node gh-social-preview.js init-auth [--storage-state .auth/github.json] [--base-url https://github.com]
+node gh-social-preview.js init-auth [--storage-state /path/to/state.json] [--base-url https://github.com]
 ```
 
 Options:
 
 - `--storage-state` (optional): Path where Playwright session JSON is saved.
-  - Default: `./.auth/<host>.json` (`./.auth/github.json` for `github.com`)
+  - Default: `$XDG_STATE_HOME/gh-social-preview/auth/<host>.json`
+  - Fallback when `XDG_STATE_HOME` is unset: `~/.local/state/gh-social-preview/auth/<host>.json`
 - `--base-url` (optional): GitHub base URL (for GitHub Enterprise, for example).
 
 Notes:
@@ -78,7 +79,7 @@ Notes:
 ### Main command
 
 ```bash
-node gh-social-preview.js --repo owner/repo [--storage-state .auth/github.json] [options]
+node gh-social-preview.js --repo owner/repo [--storage-state /path/to/state.json] [options]
 ```
 
 Required:
@@ -88,7 +89,7 @@ Required:
 Optional:
 
 - `--base-url`: Default `https://github.com`
-- `--storage-state`: Default `./.auth/<host>.json` (uses `./.auth/github.json` for GitHub.com)
+- `--storage-state`: Default `$XDG_STATE_HOME/gh-social-preview/auth/<host>.json` (fallback: `~/.local/state/gh-social-preview/auth/<host>.json`; uses `<host>=github` for GitHub.com)
 - `--width`: Default `960`
 - `--height`: Default `480`
 - `--format`: `png` or `jpeg` (default `jpeg`)
@@ -134,6 +135,8 @@ node gh-social-preview.js \
 
 - Redirected to `/login` during run:
   - Re-run `init-auth` and use the same base URL + storage-state path (or default host path).
+- Previously used `./.auth/<host>.json` defaults:
+  - Move that file to the XDG default path above (or pass `--storage-state` explicitly).
 - README container not found:
   - Repo likely does not have a root `README.md` on its default branch, or GitHub markup/layout changed.
 - Failed to query repo metadata from GitHub API:

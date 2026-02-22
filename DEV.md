@@ -18,7 +18,7 @@ Recommended loop:
 1. Open browser/session:
 ```bash
 playwright-cli open
-playwright-cli state-load .auth/github.json
+playwright-cli state-load "${XDG_STATE_HOME:-$HOME/.local/state}/gh-social-preview/auth/github.json"
 ```
 2. Navigate and inspect:
 ```bash
