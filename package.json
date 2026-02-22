@@ -1,14 +1,39 @@
 {
   "name": "gh-social-preview",
   "version": "0.0.1",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "description": "CLI tool to screenshot a GitHub README and upload it as the repository social preview image.",
+  "main": "./gh-social-preview.js",
+  "bin": {
+    "gh-social-preview": "./gh-social-preview.js"
   },
-  "keywords": [],
-  "author": "",
+  "scripts": {
+    "test": "node gh-social-preview.js --help"
+  },
+  "keywords": [
+    "github",
+    "social-preview",
+    "open-graph",
+    "playwright",
+    "cli",
+    "automation"
+  ],
+  "author": "Jeremy Howard (https://answer.ai)",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AnswerDotAI/gh-social-preview.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AnswerDotAI/gh-social-preview/issues"
+  },
+  "homepage": "https://github.com/AnswerDotAI/gh-social-preview#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "gh-social-preview.js",
+    "README.md"
+  ],
   "type": "commonjs",
   "dependencies": {
     "playwright": "^1.58.2"

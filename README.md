@@ -17,6 +17,22 @@ It uses Playwright UI automation because this setting is managed in GitHub's web
 
 ## Install
 
+From npm (recommended):
+
+```bash
+npm i -g gh-social-preview
+npx playwright install chromium
+```
+
+Or without global install:
+
+```bash
+npx gh-social-preview init-auth
+npx gh-social-preview update --repo owner/repo
+```
+
+From source:
+
 ```bash
 npm install
 npx playwright install chromium
