@@ -1,6 +1,6 @@
 {
   "name": "gh-social-preview",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "CLI tool to screenshot a GitHub README and upload it as the repository social preview image.",
   "main": "./gh-social-preview.js",
   "bin": {
