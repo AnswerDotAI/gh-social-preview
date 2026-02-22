@@ -89,8 +89,8 @@ Optional:
 
 - `--base-url`: Default `https://github.com`
 - `--storage-state`: Default `./.auth/<host>.json` (uses `./.auth/github.json` for GitHub.com)
-- `--width`: Default `1280`
-- `--height`: Default `640`
+- `--width`: Default `960`
+- `--height`: Default `480`
 - `--format`: `png` or `jpeg` (default `jpeg`)
 - `--quality`: JPEG quality `1-100` (default `80`)
 - `--out`: Output path for screenshot (default `./.social-preview/<owner>__<repo>.<ext>`)

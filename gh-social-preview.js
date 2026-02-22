@@ -3,7 +3,7 @@
  * gh-social-preview.js
  *
  * Automates:
- *   - screenshot of a repo README (1280x640 viewport)
+ *   - screenshot of a repo README (960x480 default viewport)
  *   - upload as the repo's Social preview image (Open Graph image) in Settings
  *
  * Why UI automation?
@@ -24,8 +24,8 @@
  *   --headless true|false               (default: true for update, false for init-auth)
  *
  * Options (update):
- *   --width 1280
- *   --height 640
+ *   --width 960
+ *   --height 480
  *   --format png|jpeg                   (default: jpeg)
  *   --quality 80                        (jpeg only; default: 80)
  *   --out ./social-preview.jpg          (default: ./.social-preview/<owner>__<repo>.<ext>)
@@ -34,6 +34,9 @@
 const fs = require("fs");
 const path = require("path");
 const { chromium } = require("playwright");
+
+const defaultCaptureWidth = 960;
+const defaultCaptureHeight = 480;
 
 function parseArgs(argv) {
   // Minimal flag parser: --key value, or --flag (boolean true)
@@ -502,8 +505,8 @@ Options:
   --headless   true|false (default: init-auth=false, update=true)
 
 Update options:
-  --width      Viewport width (default: 1280)
-  --height     Viewport height (default: 640)
+  --width      Viewport width (default: ${defaultCaptureWidth})
+  --height     Viewport height (default: ${defaultCaptureHeight})
   --format     png|jpeg (default: jpeg)
   --quality    JPEG quality 1-100 (default: 80; only for jpeg)
   --out        Output screenshot path (default: ./.social-preview/<owner>__<repo>.<ext>)
@@ -535,8 +538,8 @@ async function main() {
   if (cmd === "update") {
     const repo = normalizeRepo(args.repo);
     const storageStatePath = args["storage-state"] ? path.resolve(String(args["storage-state"])) : defaultStorageState;
-    const width = toInt(args.width, 1280);
-    const height = toInt(args.height, 640);
+    const width = toInt(args.width, defaultCaptureWidth);
+    const height = toInt(args.height, defaultCaptureHeight);
     const format = String(args.format || "jpeg").toLowerCase() === "png" ? "png" : "jpeg";
     const quality = Math.max(1, Math.min(100, toInt(args.quality, 80)));
     const outPath = args.out ? path.resolve(String(args.out)) : null;
