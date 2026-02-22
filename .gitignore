@@ -2,7 +2,6 @@ node_modules/
 .auth/
 .playwright-cli/
 .social-preview/
-package-lock.json
 _proc/
 sidebar.yml
 Gemfile.lock
