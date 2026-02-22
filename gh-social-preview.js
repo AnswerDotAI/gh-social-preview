@@ -15,15 +15,15 @@
  *   1) Init auth (interactive login, saves cookies/session):
  *        node gh-social-preview.js init-auth
  *
- *   2) Update social preview from README screenshot:
- *        node gh-social-preview.js update --repo owner/repo
+ *   2) Update social preview from README screenshot (main command):
+ *        node gh-social-preview.js --repo owner/repo
  *
  * Options (both commands):
  *   --base-url https://github.com        (or your GHE base url)
  *   --storage-state .auth/<host>.json    (default: .auth/github.json for github.com)
- *   --headless true|false               (default: true for update, false for init-auth)
+ *   --headless true|false               (default: true for main command, false for init-auth)
  *
- * Options (update):
+ * Options (main command):
  *   --width 960
  *   --height 480
  *   --format png|jpeg                   (default: jpeg)
@@ -497,14 +497,14 @@ function printHelp() {
   console.log(`
 Usage:
   node gh-social-preview.js init-auth [--storage-state .auth/github.json] [--base-url https://github.com]
-  node gh-social-preview.js update --repo owner/repo [--storage-state .auth/github.json] [options]
+  node gh-social-preview.js --repo owner/repo [--storage-state .auth/github.json] [options]
 
 Options:
   --base-url   Base GitHub URL (default: https://github.com)
   --storage-state  Path to Playwright storageState JSON (default: ./.auth/<host>.json)
-  --headless   true|false (default: init-auth=false, update=true)
+  --headless   true|false (default: init-auth=false, main command=true)
 
-Update options:
+Main command options:
   --width      Viewport width (default: ${defaultCaptureWidth})
   --height     Viewport height (default: ${defaultCaptureHeight})
   --format     png|jpeg (default: jpeg)
@@ -513,7 +513,7 @@ Update options:
 
 Examples:
   node gh-social-preview.js init-auth
-  node gh-social-preview.js update --repo AnswerDotAI/exhash --headless false
+  node gh-social-preview.js --repo AnswerDotAI/exhash --headless false
 `.trim());
 }
 
@@ -521,13 +521,13 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const cmd = args._[0];
 
-  if (!cmd || ["-h", "--help", "help"].includes(cmd)) {
+  const baseUrl = normalizeBaseUrl(args["base-url"] || "https://github.com");
+  const defaultStorageState = defaultStorageStatePath(baseUrl);
+
+  if (["-h", "--help", "help"].includes(cmd)) {
     printHelp();
     return;
   }
-
-  const baseUrl = normalizeBaseUrl(args["base-url"] || "https://github.com");
-  const defaultStorageState = defaultStorageStatePath(baseUrl);
 
   if (cmd === "init-auth") {
     const storageStatePath = args["storage-state"] ? path.resolve(String(args["storage-state"])) : defaultStorageState;
@@ -535,31 +535,33 @@ async function main() {
     return;
   }
 
-  if (cmd === "update") {
-    const repo = normalizeRepo(args.repo);
-    const storageStatePath = args["storage-state"] ? path.resolve(String(args["storage-state"])) : defaultStorageState;
-    const width = toInt(args.width, defaultCaptureWidth);
-    const height = toInt(args.height, defaultCaptureHeight);
-    const format = String(args.format || "jpeg").toLowerCase() === "png" ? "png" : "jpeg";
-    const quality = Math.max(1, Math.min(100, toInt(args.quality, 80)));
-    const outPath = args.out ? path.resolve(String(args.out)) : null;
-    const headless = toBool(args.headless, true);
+  if (cmd) throw new Error(`Unknown command: ${cmd}`);
 
-    await updateFlow({
-      baseUrl,
-      repo,
-      storageStatePath,
-      width,
-      height,
-      format,
-      quality,
-      outPath,
-      headless,
-    });
+  if (!args.repo) {
+    printHelp();
     return;
   }
 
-  throw new Error(`Unknown command: ${cmd}`);
+  const repo = normalizeRepo(args.repo);
+  const storageStatePath = args["storage-state"] ? path.resolve(String(args["storage-state"])) : defaultStorageState;
+  const width = toInt(args.width, defaultCaptureWidth);
+  const height = toInt(args.height, defaultCaptureHeight);
+  const format = String(args.format || "jpeg").toLowerCase() === "png" ? "png" : "jpeg";
+  const quality = Math.max(1, Math.min(100, toInt(args.quality, 80)));
+  const outPath = args.out ? path.resolve(String(args.out)) : null;
+  const headless = toBool(args.headless, true);
+
+  await updateFlow({
+    baseUrl,
+    repo,
+    storageStatePath,
+    width,
+    height,
+    format,
+    quality,
+    outPath,
+    headless,
+  });
 }
 
 main().catch((err) => {

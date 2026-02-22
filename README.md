@@ -28,7 +28,7 @@ Or without global install:
 
 ```bash
 npx gh-social-preview init-auth
-npx gh-social-preview update --repo owner/repo
+npx gh-social-preview --repo owner/repo
 ```
 
 From source:
@@ -49,7 +49,7 @@ node gh-social-preview.js init-auth
 2. Update social preview from README screenshot:
 
 ```bash
-node gh-social-preview.js update --repo owner/repo
+node gh-social-preview.js --repo owner/repo
 ```
 
 ## Usage
@@ -75,10 +75,10 @@ Notes:
 - Opens a visible browser window.
 - Waits until login is detected, then writes storage state.
 
-### `update`
+### Main command
 
 ```bash
-node gh-social-preview.js update --repo owner/repo [--storage-state .auth/github.json] [options]
+node gh-social-preview.js --repo owner/repo [--storage-state .auth/github.json] [options]
 ```
 
 Required:
@@ -101,7 +101,7 @@ Optional:
 Update with visible browser and custom output:
 
 ```bash
-node gh-social-preview.js update \
+node gh-social-preview.js \
   --repo AnswerDotAI/exhash \
   --headless false \
   --out .social-preview/exhash.jpg
@@ -113,7 +113,7 @@ Use against GitHub Enterprise:
 node gh-social-preview.js init-auth \
   --base-url https://github.mycompany.com
 
-node gh-social-preview.js update \
+node gh-social-preview.js \
   --base-url https://github.mycompany.com \
   --repo team/repo \
   --headless false
@@ -132,7 +132,7 @@ node gh-social-preview.js update \
 
 ## Troubleshooting
 
-- Redirected to `/login` during update:
+- Redirected to `/login` during run:
   - Re-run `init-auth` and use the same base URL + storage-state path (or default host path).
 - README container not found:
   - Repo likely does not have a root `README.md` on `main`, or GitHub markup/layout changed.
