@@ -94,7 +94,7 @@ Optional:
 - `--height`: Default `480`
 - `--format`: `png` or `jpeg` (default `jpeg`)
 - `--quality`: JPEG quality `1-100` (default `80`)
-- `--out`: Output path for screenshot (default `./.social-preview/<owner>__<repo>.<ext>`)
+- `--out`: Output path for screenshot (default `$XDG_CACHE_HOME/gh-social-preview/images/<owner>__<repo>.<ext>`, fallback `~/.cache/gh-social-preview/images/<owner>__<repo>.<ext>`)
 - `--headless`: `true|false` (default `true`)
 
 ## Examples
@@ -150,7 +150,7 @@ node gh-social-preview.js \
 
 `--storage-state` contains authenticated browser session data. Treat it like a credential.
 
-Recommended `.gitignore` entries:
+If you override defaults to store auth/screenshots in your repo, ignore those paths:
 
 ```gitignore
 .auth/

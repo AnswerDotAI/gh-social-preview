@@ -28,7 +28,7 @@
  *   --height 480
  *   --format png|jpeg                   (default: jpeg)
  *   --quality 80                        (jpeg only; default: 80)
- *   --out ./social-preview.jpg          (default: ./.social-preview/<owner>__<repo>.<ext>)
+ *   --out /path/to/image.jpg            (default: $XDG_CACHE_HOME/gh-social-preview/images/<owner>__<repo>.<ext>)
  */
 
 const fs = require("fs");
@@ -119,7 +119,7 @@ function normalizeRepo(repoOrUrl) {
 
 function defaultOutPath(repo, format) {
   const [owner, name] = repo.split("/");
-  const dir = path.join(process.cwd(), ".social-preview");
+  const dir = path.join(defaultXdgCacheHome(), "gh-social-preview", "images");
   ensureDir(dir);
   const ext = format === "png" ? "png" : "jpg";
   return path.join(dir, `${owner}__${name}.${ext}`);
@@ -138,6 +138,12 @@ function defaultXdgStateHome() {
 
 function defaultStorageStatePath(baseUrl) {
   return path.join(defaultXdgStateHome(), "gh-social-preview", "auth", `${storageStateStem(baseUrl)}.json`);
+}
+
+function defaultXdgCacheHome() {
+  const configured = String(process.env.XDG_CACHE_HOME || "").trim();
+  if (configured) return path.resolve(configured);
+  return path.join(os.homedir(), ".cache");
 }
 
 function resolveStorageStatePath(baseUrl, inputPath) {
@@ -573,7 +579,7 @@ Main command options:
   --height     Viewport height (default: ${defaultCaptureHeight})
   --format     png|jpeg (default: jpeg)
   --quality    JPEG quality 1-100 (default: 80; only for jpeg)
-  --out        Output screenshot path (default: ./.social-preview/<owner>__<repo>.<ext>)
+  --out        Output screenshot path (default: $XDG_CACHE_HOME/gh-social-preview/images/<owner>__<repo>.<ext>, fallback: ~/.cache/gh-social-preview/images/<owner>__<repo>.<ext>)
 
 Examples:
   node gh-social-preview.js init-auth
