@@ -4,7 +4,7 @@ Automate GitHub social preview image updates from your repository README.
 
 This utility does two things:
 
-1. Captures a screenshot of `https://github.com/<owner>/<repo>/blob/main/README.md`.
+1. Captures a screenshot of `https://github.com/<owner>/<repo>/blob/<default-branch>/README.md`.
 2. Uploads that image to the repo's **Settings -> Social preview**.
 
 It uses Playwright UI automation because this setting is managed in GitHub's web UI.
@@ -122,7 +122,7 @@ node gh-social-preview.js \
 ## Behavior Notes
 
 - The screenshot is a viewport capture (not full page).
-- README capture always targets `blob/main/README.md`, waits for `article.markdown-body`, then hides GitHub's sticky blob header (`Preview | Code | Blame`) before taking the screenshot.
+- README capture resolves the repo default branch via the GitHub REST API (`/repos/<owner>/<repo>`), then targets `blob/<default-branch>/README.md`, waits for `article.markdown-body`, and hides GitHub's sticky blob header (`Preview | Code | Blame`) before taking the screenshot.
 - Upload supports both states:
   - no existing social card: adds a new one
   - existing social card: replaces it
@@ -135,7 +135,9 @@ node gh-social-preview.js \
 - Redirected to `/login` during run:
   - Re-run `init-auth` and use the same base URL + storage-state path (or default host path).
 - README container not found:
-  - Repo likely does not have a root `README.md` on `main`, or GitHub markup/layout changed.
+  - Repo likely does not have a root `README.md` on its default branch, or GitHub markup/layout changed.
+- Failed to query repo metadata from GitHub API:
+  - Ensure the repository exists and is publicly accessible.
 - Upload controls not found:
   - GitHub UI may have changed; selectors in `gh-social-preview.js` may need updating.
 - Permission errors in settings:

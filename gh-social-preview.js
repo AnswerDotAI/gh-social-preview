@@ -136,6 +136,48 @@ function repoSettingsUrl(baseUrl, repo) {
 
 const readmeSelector = "article.markdown-body";
 
+function readmeBlobUrl(repoUrl, branch) {
+  return `${repoUrl}/blob/${encodeURIComponent(branch)}/README.md`;
+}
+
+function repoApiUrl(baseUrl, repo) {
+  const host = new URL(baseUrl).hostname.toLowerCase();
+  if (host === "github.com") return `https://api.github.com/repos/${repo}`;
+  return `${baseUrl}/api/v3/repos/${repo}`;
+}
+
+function repoApiHeaders() {
+  return {
+    Accept: "application/vnd.github+json",
+    "User-Agent": "gh-social-preview",
+  };
+}
+
+async function resolveDefaultBranch(baseUrl, repo) {
+  const apiUrl = repoApiUrl(baseUrl, repo);
+  const resp = await fetch(apiUrl, { headers: repoApiHeaders() });
+  if (!resp.ok) {
+    const body = await resp.text().catch(() => "");
+    throw new Error(
+      `Failed to query repo metadata from GitHub API (${resp.status}) at ${apiUrl}.\n` +
+      "Ensure the repository exists and is publicly accessible.\n" +
+      (body ? `API response: ${body.slice(0, 500)}` : "")
+    );
+  }
+
+  let payload = null;
+  try {
+    payload = await resp.json();
+  } catch {
+    throw new Error(`Could not parse GitHub API JSON response while resolving default branch for ${repo}.`);
+  }
+
+  const branch = String(payload?.default_branch || "").trim();
+  if (!branch) throw new Error(`Could not determine default branch for ${repo} via GitHub API.`);
+  console.log(`Resolved default branch: ${branch}`);
+  return branch;
+}
+
 async function hideBlobChrome(page) {
   await page.evaluate(() => {
     // Remove GitHub's sticky blob header (Preview/Code/Blame + file controls) from captures.
@@ -145,8 +187,8 @@ async function hideBlobChrome(page) {
   });
 }
 
-async function openAndPositionReadme(page, repoUrl, timeoutMs = 20_000) {
-  const url = `${repoUrl}/blob/main/README.md`;
+async function openAndPositionReadme(page, repoUrl, branch, timeoutMs = 20_000) {
+  const url = readmeBlobUrl(repoUrl, branch);
   console.log(`Opening README: ${url}`);
   await page.goto(url, { waitUntil: "domcontentloaded" });
 
@@ -243,6 +285,7 @@ async function captureReadmeScreenshot({
   headless,
 }) {
   const repoUrl = `${baseUrl}/${repo}`;
+  const defaultBranch = await resolveDefaultBranch(baseUrl, repo);
 
   const { browser, page } = await launchContext({
     storageStatePath: storageStatePath || null,
@@ -251,7 +294,7 @@ async function captureReadmeScreenshot({
     height,
   });
 
-  const usedReadmeUrl = await openAndPositionReadme(page, repoUrl, 20_000);
+  const usedReadmeUrl = await openAndPositionReadme(page, repoUrl, defaultBranch, 20_000);
 
   // Take viewport screenshot at exactly width x height.
   ensureDir(path.dirname(outPath));
@@ -292,7 +335,7 @@ async function captureReadmeScreenshot({
             width,
             height,
           });
-          await openAndPositionReadme(p2, repoUrl, 20_000);
+          await openAndPositionReadme(p2, repoUrl, defaultBranch, 20_000);
           await p2.screenshot({ path: tmpPath, type: "jpeg", quality: q, fullPage: false });
           await b2.close();
         })();
