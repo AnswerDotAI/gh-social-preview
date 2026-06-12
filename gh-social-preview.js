@@ -11,19 +11,18 @@
  * recommend 1280x640). There isn't a stable public API for this, so browser automation is
  * usually the most robust approach.
  *
- * Commands:
- *   1) Init auth (interactive login, saves cookies/session):
- *        node gh-social-preview.js init-auth
+ * Usage:
+ *   1) Authenticate (interactive login, saves cookies/session):
+ *        gh-social-preview --login
  *
- *   2) Update social preview from README screenshot (main command):
- *        node gh-social-preview.js --repo owner/repo
+ *   2) Update social preview from README screenshot:
+ *        gh-social-preview owner/repo
  *
- * Options (both commands):
+ * Options:
+ *   --login                              (open a browser to log into GitHub and save the session)
  *   --base-url https://github.com        (or your GHE base url)
  *   --storage-state /path/to/state.json   (default: $XDG_STATE_HOME/gh-social-preview/auth/<host>.json)
- *   --headless true|false               (default: true for main command, false for init-auth)
- *
- * Options (main command):
+ *   --headless true|false               (default: true; login is always headful)
  *   --width 960
  *   --height 480
  *   --format png|jpeg                   (default: jpeg)
@@ -39,7 +38,7 @@ const { chromium } = require("playwright");
 const defaultCaptureWidth = 960;
 const defaultCaptureHeight = 480;
 
-function parseArgs(argv) {
+function parseArgs(argv, boolFlags = []) {
   // Minimal flag parser: --key value, or --flag (boolean true)
   const out = { _: [] };
   for (let i = 0; i < argv.length; i++) {
@@ -47,7 +46,7 @@ function parseArgs(argv) {
     if (a.startsWith("--")) {
       const key = a.slice(2);
       const next = argv[i + 1];
-      if (!next || next.startsWith("--")) {
+      if (boolFlags.includes(key) || !next || next.startsWith("--")) {
         out[key] = true;
       } else {
         out[key] = next;
@@ -98,7 +97,7 @@ function normalizeBaseUrl(baseUrl) {
 
 function normalizeRepo(repoOrUrl) {
   const s = String(repoOrUrl || "").trim();
-  if (!s) throw new Error("Missing --repo (expected owner/repo or a GitHub repo URL).");
+  if (!s) throw new Error("Missing repo (expected owner/repo or a GitHub repo URL).");
 
   if (s.includes("://")) {
     const u = new URL(s);
@@ -114,7 +113,7 @@ function normalizeRepo(repoOrUrl) {
   const hashSplit = s.split("#")[0];
   if (/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(hashSplit)) return hashSplit;
 
-  throw new Error(`Invalid --repo "${s}". Expected "owner/repo" or a GitHub repo URL.`);
+  throw new Error(`Invalid repo "${s}". Expected "owner/repo" or a GitHub repo URL.`);
 }
 
 function defaultOutPath(repo, format) {
@@ -232,7 +231,7 @@ async function launchContext({ storageStatePath, headless, width, height }) {
     if (!fs.existsSync(storageStatePath)) {
       throw new Error(
         `Storage state not found at "${storageStatePath}". Run:\n` +
-          `  node gh-social-preview.js init-auth --storage-state ${storageStatePath}`
+          `  gh-social-preview --login`
       );
     }
     contextOptions.storageState = storageStatePath;
@@ -249,7 +248,7 @@ async function launchContext({ storageStatePath, headless, width, height }) {
 
 async function initAuth({ baseUrl, storageStatePath }) {
   if (!storageStatePath) {
-    throw new Error("init-auth requires --storage-state <path>");
+    throw new Error("--login requires a --storage-state <path>");
   }
   ensureDir(path.dirname(storageStatePath));
 
@@ -388,10 +387,9 @@ async function uploadSocialPreview({
     throw new Error(`Image file not found: ${imagePath}`);
   }
 
-  const repoUrl = `${baseUrl}/${repo}`;
   const settingsUrl = repoSettingsUrl(baseUrl, repo);
 
-  const { browser, page } = await launchContext({
+  const { browser, context, page } = await launchContext({
     storageStatePath,
     headless,
     width: 1280,
@@ -399,13 +397,22 @@ async function uploadSocialPreview({
   });
 
   console.log(`Opening Settings: ${settingsUrl}`);
-  await page.goto(settingsUrl, { waitUntil: "domcontentloaded" });
+  const resp = await page.goto(settingsUrl, { waitUntil: "domcontentloaded" });
 
-  // If we got bounced to login, stop.
-  if (page.url().includes("/login")) {
+  // Fail fast if the saved session is missing/expired, rather than timing out on selectors.
+  const username = await page.evaluate(() =>
+    document.querySelector('meta[name="user-login"]')?.content?.trim() || ""
+  );
+  if (page.url().includes("/login") || !username) {
     await browser.close();
     throw new Error(
-      "Not logged in (redirected to /login). Re-run init-auth and try again."
+      "Not authenticated (GitHub session expired or invalid). Run with --login to refresh it."
+    );
+  }
+  if (resp && resp.status() === 404) {
+    await browser.close();
+    throw new Error(
+      `Settings page returned 404 for ${repo}. Check that @${username} has admin access to this repo.`
     );
   }
 
@@ -522,6 +529,10 @@ async function uploadSocialPreview({
 
   console.log(`✅ Upload complete. New image id: ${String(newId).trim()}`);
 
+  // GitHub session cookies are rolling: re-save state so each run extends the session expiry.
+  await context.storageState({ path: storageStatePath });
+  console.log("Refreshed saved session state.");
+
   await browser.close();
 }
 
@@ -566,15 +577,14 @@ async function updateFlow(opts) {
 function printHelp() {
   console.log(`
 Usage:
-  node gh-social-preview.js init-auth [--storage-state /path/to/state.json] [--base-url https://github.com]
-  node gh-social-preview.js --repo owner/repo [--storage-state /path/to/state.json] [options]
+  gh-social-preview <owner/repo> [options]
+  gh-social-preview --login [--storage-state /path/to/state.json] [--base-url https://github.com]
 
 Options:
+  --login      Log into GitHub in a browser window and save the session
   --base-url   Base GitHub URL (default: https://github.com)
   --storage-state  Path to Playwright storageState JSON (default: $XDG_STATE_HOME/gh-social-preview/auth/<host>.json, fallback: ~/.local/state/gh-social-preview/auth/<host>.json)
-  --headless   true|false (default: init-auth=false, main command=true)
-
-Main command options:
+  --headless   true|false (default: true; --login is always headful)
   --width      Viewport width (default: ${defaultCaptureWidth})
   --height     Viewport height (default: ${defaultCaptureHeight})
   --format     png|jpeg (default: jpeg)
@@ -582,37 +592,33 @@ Main command options:
   --out        Output screenshot path (default: $XDG_CACHE_HOME/gh-social-preview/images/<owner>__<repo>.<ext>, fallback: ~/.cache/gh-social-preview/images/<owner>__<repo>.<ext>)
 
 Examples:
-  node gh-social-preview.js init-auth
-  node gh-social-preview.js --repo AnswerDotAI/exhash --headless false
+  gh-social-preview --login
+  gh-social-preview AnswerDotAI/exhash --headless false
 `.trim());
 }
 
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
-  const cmd = args._[0];
+  const args = parseArgs(process.argv.slice(2), ["login"]);
+  const target = args._[0];
 
   const baseUrl = normalizeBaseUrl(args["base-url"] || "https://github.com");
-
-  if (["-h", "--help", "help"].includes(cmd)) {
-    printHelp();
-    return;
-  }
-
-  if (cmd === "init-auth") {
-    const storageStatePath = resolveStorageStatePath(baseUrl, args["storage-state"]);
-    await initAuth({ baseUrl, storageStatePath });
-    return;
-  }
-
-  if (cmd) throw new Error(`Unknown command: ${cmd}`);
-
-  if (!args.repo) {
-    printHelp();
-    return;
-  }
-
-  const repo = normalizeRepo(args.repo);
   const storageStatePath = resolveStorageStatePath(baseUrl, args["storage-state"]);
+
+  if (args.help || ["-h", "--help", "help"].includes(target)) {
+    printHelp();
+    return;
+  }
+
+  if (target === "init-auth") throw new Error("init-auth has been replaced by --login.");
+
+  if (args.login) await initAuth({ baseUrl, storageStatePath });
+
+  if (!target) {
+    if (!args.login) printHelp();
+    return;
+  }
+
+  const repo = normalizeRepo(target);
   const width = toInt(args.width, defaultCaptureWidth);
   const height = toInt(args.height, defaultCaptureHeight);
   const format = String(args.format || "jpeg").toLowerCase() === "png" ? "png" : "jpeg";

@@ -27,8 +27,8 @@ npx playwright install chromium
 Or without global install:
 
 ```bash
-npx gh-social-preview init-auth
-npx gh-social-preview --repo owner/repo
+npx gh-social-preview --login
+npx gh-social-preview owner/repo
 ```
 
 From source:
@@ -43,25 +43,25 @@ npx playwright install chromium
 1. Authenticate once and save browser session state:
 
 ```bash
-node gh-social-preview.js init-auth
+gh-social-preview --login
 ```
 
 2. Update social preview from README screenshot:
 
 ```bash
-node gh-social-preview.js --repo owner/repo
+gh-social-preview owner/repo
 ```
 
 ## Usage
 
 ```bash
-node gh-social-preview.js help
+gh-social-preview help
 ```
 
-### `init-auth`
+### `--login`
 
 ```bash
-node gh-social-preview.js init-auth [--storage-state /path/to/state.json] [--base-url https://github.com]
+gh-social-preview --login [--storage-state /path/to/state.json] [--base-url https://github.com]
 ```
 
 Options:
@@ -75,16 +75,17 @@ Notes:
 
 - Opens a visible browser window.
 - Waits until login is detected, then writes storage state.
+- Can be combined with a repo to log in and update in one go: `gh-social-preview owner/repo --login`
 
 ### Main command
 
 ```bash
-node gh-social-preview.js --repo owner/repo [--storage-state /path/to/state.json] [options]
+gh-social-preview owner/repo [--storage-state /path/to/state.json] [options]
 ```
 
 Required:
 
-- `--repo`: `owner/repo` or full repo URL.
+- `owner/repo` (or a full repo URL) as the first argument.
 
 Optional:
 
@@ -102,8 +103,7 @@ Optional:
 Update with visible browser and custom output:
 
 ```bash
-node gh-social-preview.js \
-  --repo AnswerDotAI/exhash \
+gh-social-preview AnswerDotAI/exhash \
   --headless false \
   --out .social-preview/exhash.jpg
 ```
@@ -111,12 +111,11 @@ node gh-social-preview.js \
 Use against GitHub Enterprise:
 
 ```bash
-node gh-social-preview.js init-auth \
+gh-social-preview --login \
   --base-url https://github.mycompany.com
 
-node gh-social-preview.js \
+gh-social-preview team/repo \
   --base-url https://github.mycompany.com \
-  --repo team/repo \
   --headless false
 ```
 
@@ -131,10 +130,15 @@ node gh-social-preview.js \
 - If PNG output is over 1MB, the script warns but does not auto-convert.
 - Upload completion primarily uses GitHub's upload response (`/upload/repository-images/...`) plus non-empty social-image id; unchanged id is accepted for identical-image replacements.
 
+## Behavior Notes (auth)
+
+- GitHub session cookies are rolling: each successful run re-saves the storage state, extending the session expiry. Sessions only expire if the tool goes unused for an extended period (~2 weeks).
+- Authentication failures are detected immediately on the settings page (no long selector timeouts).
+
 ## Troubleshooting
 
-- Redirected to `/login` during run:
-  - Re-run `init-auth` and use the same base URL + storage-state path (or default host path).
+- "Not authenticated (GitHub session expired or invalid)":
+  - Re-run with `--login` using the same base URL + storage-state path (or default host path).
 - Previously used `./.auth/<host>.json` defaults:
   - Move that file to the XDG default path above (or pass `--storage-state` explicitly).
 - README container not found:
