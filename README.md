@@ -128,7 +128,7 @@ gh-social-preview team/repo \
   - existing social card: replaces it
 - If a JPEG output is over 1MB, the script retries with lower JPEG quality.
 - If PNG output is over 1MB, the script warns but does not auto-convert.
-- Upload completion primarily uses GitHub's upload response (`/upload/repository-images/...`) plus non-empty social-image id; unchanged id is accepted for identical-image replacements.
+- Upload completion waits for GitHub's final image-attachment response (`PUT /upload/repository-images/...`), after the browser has transferred the file to object storage, plus a non-empty social-image id.
 
 ## Behavior Notes (auth)
 

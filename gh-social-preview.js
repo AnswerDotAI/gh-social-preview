@@ -462,8 +462,9 @@ async function uploadSocialPreview({
     const u = resp.url();
     const ok = resp.status() >= 200 && resp.status() < 300;
     if (!ok) return false;
-    // GitHub upload flow can report success on either policy creation or image attach endpoints.
-    return u.includes("/upload/repository-images/") || u.includes("/upload/policies/repository-images");
+    // Policy creation happens before the browser uploads to S3. Wait for GitHub to attach
+    // the completed upload, or closing the browser here can abort the file transfer.
+    return resp.request().method() === "PUT" && u.includes("/upload/repository-images/");
   }, { timeout: 20_000 }).then((resp) => `${resp.status()} ${resp.url()}`).catch(() => "");
 
   // Upload, using either direct setInputFiles (best) or filechooser fallback.
